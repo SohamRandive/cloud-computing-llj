@@ -2,115 +2,109 @@ import random
 from faker import Faker
 
 fake = Faker()
-Faker.seed(42)          # reproducible names/emails across runs
-random.seed(42)
+Faker.seed(99)
+random.seed(99)
 
 # ── Kafka ─────────────────────────────────────────────
 KAFKA_BROKER = "localhost:9092"
 
 TOPICS = {
-    "web_logs":    "web-logs",
-    "transactions":"transactions",
-    "reviews":     "reviews",
-    "social":      "social-media",
+    "clickstream":   "clickstream",
+    "purchases":     "purchases",
+    "reviews":       "product-reviews",
+    "social":        "social-buzz",
 }
 
 PRODUCER_CONFIG = {
     "bootstrap_servers": KAFKA_BROKER,
-    "acks": "all",                  # wait for broker ack
+    "acks": "all",
     "retries": 3,
-    "linger_ms": 10,                # micro-batch up to 10ms for throughput
-    "batch_size": 16384,            # 16KB batch
-    "compression_type": "gzip",
+    "linger_ms": 5,
+    "batch_size": 32768,
+    "compression_type": "snappy",
 }
 
-# ── Shared customer pool ──────────────────────────────
-# 500 customers shared across ALL generators so that
-# customer_id joins work correctly in the gold layer.
-NUM_CUSTOMERS = 10000
+# ── Shared user pool ──────────────────────────────────
+NUM_USERS = 12000
 
-CUSTOMERS = [
+USERS = [
     {
-        "customer_id": f"CUST-{str(i).zfill(5)}",  # CUST-00001 … CUST-00500
-        "name":        fake.name(),
-        "email":       fake.email(),
-        "country":     fake.country_code(),
-        "age_group":   random.choice(["18-24", "25-34", "35-44", "45-54", "55+"]),
-        "segment":     random.choice(["vip", "regular", "new", "at_risk"]),
+        "user_id":   f"USR-{str(i).zfill(6)}",
+        "name":      fake.name(),
+        "email":     fake.email(),
+        "country":   fake.country_code(),
+        "age_group": random.choice(["18-24", "25-34", "35-44", "45-54", "55+"]),
+        "tier":      random.choice(["platinum", "gold", "silver", "basic"]),
     }
-    for i in range(1, NUM_CUSTOMERS + 1)
+    for i in range(1, NUM_USERS + 1)
 ]
 
-CUSTOMER_IDS = [c["customer_id"] for c in CUSTOMERS]
+USER_IDS = [u["user_id"] for u in USERS]
 
 # ── Product catalogue ─────────────────────────────────
 PRODUCT_CATEGORIES = [
-    "Electronics", "Clothing", "Home & Kitchen",
-    "Books", "Sports", "Beauty", "Toys", "Grocery",
+    "Electronics", "Apparel", "Home & Living",
+    "Books", "Fitness", "Beauty & Care", "Toys", "Groceries",
 ]
 
 PRODUCTS = [
-    {"product_id": f"PROD-{str(i).zfill(4)}",
-     "name": fake.catch_phrase(),
-     "category": random.choice(PRODUCT_CATEGORIES),
-     "price": round(random.uniform(5.0, 999.0), 2)}
-    for i in range(1, 201)          # 200 products
+    {
+        "sku":      f"SKU-{str(i).zfill(5)}",
+        "title":    fake.catch_phrase(),
+        "category": random.choice(PRODUCT_CATEGORIES),
+        "price":    round(random.uniform(10.0, 1200.0), 2),
+    }
+    for i in range(1, 251)
 ]
 
-PRODUCT_IDS = [p["product_id"] for p in PRODUCTS]
+SKU_IDS = [p["sku"] for p in PRODUCTS]
 
-# ── Web log constants ─────────────────────────────────
-EVENT_TYPES   = ["click", "search", "pageview", "add_to_cart", "remove_from_cart"]
-DEVICES       = ["mobile", "desktop", "tablet"]
-REFERRERS     = ["google", "direct", "facebook", "instagram", "email", "twitter"]
+# ── Clickstream constants ─────────────────────────────
+CLICK_EVENTS  = ["view", "search", "scroll", "add_to_wishlist", "add_to_cart", "remove_from_cart"]
+PLATFORMS     = ["mobile_app", "desktop_web", "tablet_web"]
+TRAFFIC_SRC   = ["organic", "paid_search", "email", "social", "referral", "direct"]
 
-PAGES = [
-    "/", "/products", "/cart", "/checkout",
-    "/orders", "/account", "/search", "/deals",
+SITE_PAGES = [
+    "/", "/shop", "/cart", "/checkout",
+    "/account", "/search", "/offers", "/new-arrivals",
 ]
 
 # ── Payment methods ───────────────────────────────────
-PAYMENT_METHODS = ["credit_card", "debit_card", "upi", "netbanking", "wallet"]
+PAYMENT_METHODS = ["card", "upi", "netbanking", "buy_now_pay_later", "wallet", "cod"]
 
-# ── Order statuses ────────────────────────────────────
-ORDER_STATUSES = ["placed", "confirmed", "shipped", "delivered", "returned", "cancelled"]
+# ── Purchase statuses ─────────────────────────────────
+PURCHASE_STATUSES = ["placed", "confirmed", "dispatched", "delivered", "returned", "cancelled"]
 
 # ── Social platforms ──────────────────────────────────
-PLATFORMS = ["twitter", "facebook", "instagram"]
+SOCIAL_PLATFORMS = ["instagram", "twitter", "facebook", "youtube"]
 
-# ── Review templates (mixed sentiment for VADER) ──────
+# ── Review texts ──────────────────────────────────────
 REVIEW_TEXTS = [
-    # positive
-    "Absolutely love this product! Exceeded my expectations.",
-    "Great quality, fast delivery. Will definitely buy again.",
-    "Amazing value for money. Highly recommend to everyone.",
-    "Perfectly packaged, works flawlessly. Very happy with purchase.",
-    "Outstanding product. Customer service was also excellent.",
-    # neutral
-    "Product is okay. Nothing special but does the job.",
-    "Decent quality for the price. Average experience overall.",
-    "It works as described. No complaints, no praise either.",
-    "Delivery was on time. Product is what I expected.",
-    "Fine product, could be better but acceptable.",
-    # negative
-    "Very disappointed. Quality is much worse than advertised.",
-    "Stopped working after 2 days. Complete waste of money.",
-    "Terrible experience. Would not recommend to anyone.",
-    "Product arrived damaged. Customer support was unhelpful.",
-    "Extremely poor quality. Returning this immediately.",
+    "Absolutely worth every rupee. Top-notch quality and fast shipping.",
+    "Exceeded expectations. Packaging was excellent and product works great.",
+    "Would highly recommend. Great value and quick delivery.",
+    "Five stars! Exactly as described. Very happy with this purchase.",
+    "Brilliant product. Customer support was also very responsive.",
+    "It's okay for the price. Nothing extraordinary but does the job.",
+    "Decent quality. Delivery was on schedule. Average overall.",
+    "Product is fine. Could be better but acceptable for the cost.",
+    "Neutral experience — neither impressed nor disappointed.",
+    "Works as described. No issues so far.",
+    "Very disappointed — quality is not what was shown in photos.",
+    "Stopped functioning within a week. Complete waste of money.",
+    "Arrived damaged and return process was a nightmare.",
+    "Product is fake. Stay away from this seller.",
+    "Extremely poor build quality. Returning immediately.",
 ]
 
-SOCIAL_TEMPLATES = [
-    # positive
-    "Just received my order from this store and I'm loving it! #shopping #happy",
-    "Best online shopping experience ever! Fast delivery and great quality.",
-    "Totally obsessed with my new purchase. Worth every penny! #mustbuy",
-    # neutral
-    "My order arrived today. It's okay I guess. #shopping",
-    "Ordered something online. Let's see how it goes. #shopping",
-    "Got my package. Standard quality, nothing extraordinary.",
-    # negative
-    "Waited 2 weeks for my order and it came damaged. So frustrated! #badservice",
-    "Worst shopping experience. Never ordering from here again. #disappointed",
-    "Product quality is terrible. Complete scam. #angry #donotbuy",
+SOCIAL_TEXTS = [
+    "Just got my order and I am obsessed! Packaging was gorgeous 😍 #ShopStream #Haul",
+    "Best online shopping experience in a long time. Super fast delivery! #ShopStream",
+    "Can't stop buying from ShopStream. Quality never disappoints 🙌 #MustBuy",
+    "My package arrived today. It's alright I guess. #ShopStream",
+    "Ordered something new. Let's see if it's worth the hype. #OnlineShopping",
+    "Got my delivery. Standard stuff, nothing special.",
+    "Two weeks wait and the item came broken. So angry! #BadExperience",
+    "Worst online shopping experience ever. No refund given. #Scam",
+    "Quality is terrible. Completely misrepresented. #Disappointed",
 ]

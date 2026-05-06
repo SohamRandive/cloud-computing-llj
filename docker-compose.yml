@@ -1,21 +1,14 @@
 # ══════════════════════════════════════════════════════════════════
 #  CLOUD COMPUTING LLJ — docker-compose.yml
 #  Stack: Kafka (KRaft) · MongoDB · PostgreSQL · MinIO
-#  Kafka: 4.1.1 KRaft mode — NO Zookeeper
-#  PySpark: runs locally on host (pip install pyspark), NOT Docker
-#  Reason: bitnami/spark pulled all tags from Docker Hub (Sep 2025)
+#  PySpark runs on host (pip install pyspark)
 # ══════════════════════════════════════════════════════════════════
 
 services:
 
-  # ────────────────────────────────────────────
-  #  KAFKA — KRaft mode (no Zookeeper)
-  #  Internal:  kafka:29092  (other containers)
-  #  External:  localhost:9092  (host/PySpark)
-  # ────────────────────────────────────────────
   kafka:
     image: apache/kafka:4.1.1
-    container_name: llj-kafka
+    container_name: shopstream-kafka
     ports:
       - "${KAFKA_EXTERNAL_PORT}:9092"
       - "9093:9093"
@@ -35,11 +28,11 @@ services:
       KAFKA_LOG_RETENTION_HOURS: 24
       KAFKA_LOG_SEGMENT_BYTES: 536870912
       KAFKA_HEAP_OPTS: "-Xmx512m -Xms256m"
-      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qg"
+      CLUSTER_ID: "${CLUSTER_ID}"
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
-      - llj-net
+      - shopstream-net
     healthcheck:
       test: ["CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "kafka:29092"]
       interval: 15s
@@ -47,51 +40,42 @@ services:
       retries: 5
       start_period: 30s
 
-  # ────────────────────────────────────────────
-  #  KAFKA TOPIC SETUP — one-shot init container
-  # ────────────────────────────────────────────
   kafka-setup:
     image: apache/kafka:4.1.1
-    container_name: llj-kafka-setup
+    container_name: shopstream-kafka-setup
     depends_on:
       kafka:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
         echo 'Creating Kafka topics...';
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic web-logs       --partitions 3 --replication-factor 1;
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic transactions   --partitions 3 --replication-factor 1;
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic reviews        --partitions 2 --replication-factor 1;
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic social-media   --partitions 2 --replication-factor 1;
-        echo 'Topics created: web-logs / transactions / reviews / social-media';
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic clickstream      --partitions 3 --replication-factor 1;
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic purchases        --partitions 3 --replication-factor 1;
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic product-reviews  --partitions 2 --replication-factor 1;
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic social-buzz      --partitions 2 --replication-factor 1;
+        echo 'Topics ready: clickstream / purchases / product-reviews / social-buzz';
         exit 0;
       "
     networks:
-      - llj-net
+      - shopstream-net
 
-  # ────────────────────────────────────────────
-  #  KAFKA UI — http://localhost:8080
-  # ────────────────────────────────────────────
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
-    container_name: llj-kafka-ui
+    container_name: shopstream-kafka-ui
     ports:
       - "${KAFKA_UI_PORT}:8080"
     environment:
-      KAFKA_CLUSTERS_0_NAME: llj-local
+      KAFKA_CLUSTERS_0_NAME: shopstream-local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
     depends_on:
       kafka:
         condition: service_healthy
     networks:
-      - llj-net
+      - shopstream-net
 
-  # ────────────────────────────────────────────
-  #  MONGODB — http://localhost:8081 (Mongo Express)
-  # ────────────────────────────────────────────
   mongodb:
     image: mongo:7.0
-    container_name: llj-mongodb
+    container_name: shopstream-mongodb
     ports:
       - "${MONGO_PORT}:27017"
     environment:
@@ -102,7 +86,7 @@ services:
       - mongodb_data:/data/db
       - ./config/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     networks:
-      - llj-net
+      - shopstream-net
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
       interval: 15s
@@ -112,7 +96,7 @@ services:
 
   mongo-express:
     image: mongo-express:1.0.2
-    container_name: llj-mongo-express
+    container_name: shopstream-mongo-express
     ports:
       - "8081:8081"
     environment:
@@ -124,14 +108,11 @@ services:
       mongodb:
         condition: service_healthy
     networks:
-      - llj-net
+      - shopstream-net
 
-  # ────────────────────────────────────────────
-  #  POSTGRESQL — http://localhost:5050 (pgAdmin)
-  # ────────────────────────────────────────────
   postgres:
     image: postgres:16
-    container_name: llj-postgres
+    container_name: shopstream-postgres
     ports:
       - "${POSTGRES_PORT}:5432"
     environment:
@@ -142,7 +123,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./config/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
-      - llj-net
+      - shopstream-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -151,25 +132,21 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: llj-pgadmin
+    container_name: shopstream-pgadmin
     ports:
       - "5050:80"
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@llj.local
+      PGADMIN_DEFAULT_EMAIL: admin@shopstream.local
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: "False"
     depends_on:
       - postgres
     networks:
-      - llj-net
+      - shopstream-net
 
-  # ────────────────────────────────────────────
-  #  MINIO — Data Lake (S3-compatible)
-  #  API: localhost:9000  Console: localhost:9001
-  # ────────────────────────────────────────────
   minio:
     image: minio/minio:latest
-    container_name: llj-minio
+    container_name: shopstream-minio
     command: server /data --console-address ":9001"
     ports:
       - "${MINIO_API_PORT}:9000"
@@ -180,7 +157,7 @@ services:
     volumes:
       - minio_data:/data
     networks:
-      - llj-net
+      - shopstream-net
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 15s
@@ -190,7 +167,7 @@ services:
 
   minio-setup:
     image: minio/mc:latest
-    container_name: llj-minio-setup
+    container_name: shopstream-minio-setup
     depends_on:
       minio:
         condition: service_healthy
@@ -200,11 +177,11 @@ services:
         mc mb --ignore-existing local/${MINIO_BUCKET_BRONZE};
         mc mb --ignore-existing local/${MINIO_BUCKET_SILVER};
         mc mb --ignore-existing local/${MINIO_BUCKET_GOLD};
-        echo 'MinIO buckets ready: bronze / silver / gold';
+        echo 'MinIO buckets ready.';
         exit 0;
       "
     networks:
-      - llj-net
+      - shopstream-net
 
 volumes:
   kafka_data:
@@ -213,5 +190,5 @@ volumes:
   minio_data:
 
 networks:
-  llj-net:
+  shopstream-net:
     driver: bridge

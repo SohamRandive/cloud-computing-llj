@@ -1,0 +1,71 @@
+# ── Python ────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environments ──────────────────────────────
+ecomm_env/
+.venv/
+venv/
+env/
+ENV/
+
+# ── Spark ─────────────────────────────────────────────
+derby.log
+metastore_db/
+spark-warehouse/
+
+# ── Ivy cache (Spark JAR downloads) ──────────────────
+# Do NOT ignore ~/.ivy2 globally — it's outside the project
+# But ignore any local ivy cache if present
+.ivy2/
+
+# ── Logs ─────────────────────────────────────────────
+*.log
+*.txt
+log_*.txt
+.assets/links.txt
+
+# ── Docker volumes (never committed) ─────────────────
+# Volumes are defined in docker-compose and managed by Docker
+# No local data directories to ignore here
+
+# ── OS ───────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# ── IDE ───────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+
+# ── Environment variables ─────────────────────────────
+# .env contains credentials — NEVER commit
+.env
+
+# ── Jupyter ───────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── MinIO / S3 local data ─────────────────────────────
+minio_data/
+s3_data/
+
+# ── Checkpoint dirs created by Spark streaming ───────
+_checkpoints/
+checkpoint/

@@ -1,4 +1,4 @@
-# spark_jobs/spark_utils.py — Shared SparkSession factory for ShopStream
+# spark_jobs/spark_config.py — Shared SparkSession factory for ShopStream
 
 import logging
 import warnings

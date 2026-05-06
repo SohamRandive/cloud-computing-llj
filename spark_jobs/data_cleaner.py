@@ -18,7 +18,7 @@ from pyspark.sql import DataFrame, functions as F
 from pyspark.sql.window import Window
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from spark_jobs.spark_utils import BRONZE_PATH, SILVER_PATH, get_spark
+from spark_jobs.spark_config import BRONZE_PATH, SILVER_PATH, get_spark
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", choices=["batch", "stream"], default="batch")

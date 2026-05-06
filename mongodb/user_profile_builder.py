@@ -23,7 +23,7 @@ from pymongo.errors import BulkWriteError
 from pyspark.sql import SparkSession, functions as F
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from spark_jobs.spark_utils import SILVER_PATH, get_spark
+from spark_jobs.spark_config import SILVER_PATH, get_spark
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode",         choices=["batch", "stream"], default="batch")

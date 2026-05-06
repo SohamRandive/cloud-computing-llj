@@ -51,7 +51,7 @@ nuke:
 	docker compose --env-file .env down -v --rmi all
 
 generate:
-	python3 generators/run_all.py
+	python3 generators/launch_producers.py
 
 gen-clicks:
 	python3 generators/clickstream_producer.py
@@ -66,33 +66,33 @@ gen-social:
 	python3 generators/social_buzz_producer.py
 
 bronze:
-	python3 spark_jobs/bronze_ingestion.py --mode batch
+	python3 spark_jobs/raw_ingestion.py --mode batch
 
 silver:
-	python3 spark_jobs/silver_transform.py --mode batch
+	python3 spark_jobs/data_cleaner.py --mode batch
 
 gold:
-	python3 spark_jobs/gold_aggregations.py --mode batch
+	python3 spark_jobs/metrics_aggregator.py --mode batch
 
 pipeline:
-	python3 spark_jobs/bronze_ingestion.py --mode batch && \
-	python3 spark_jobs/silver_transform.py --mode batch && \
-	python3 spark_jobs/gold_aggregations.py --mode batch
+	python3 spark_jobs/raw_ingestion.py --mode batch && \
+	python3 spark_jobs/data_cleaner.py --mode batch && \
+	python3 spark_jobs/metrics_aggregator.py --mode batch
 
 bronze-stream:
-	python3 spark_jobs/bronze_ingestion.py --mode stream
+	python3 spark_jobs/raw_ingestion.py --mode stream
 
 silver-stream:
-	python3 spark_jobs/silver_transform.py --mode stream
+	python3 spark_jobs/data_cleaner.py --mode stream
 
 profile:
-	python3 mongodb/customer_view_builder.py --mode batch --batch-size 100
+	python3 mongodb/user_profile_builder.py --mode batch --batch-size 100
 
 profile-stream:
-	python3 mongodb/customer_view_builder.py --mode stream
+	python3 mongodb/user_profile_builder.py --mode stream
 
 profile-test:
-	python3 mongodb/customer_view_builder.py --mode batch --batch-size 10 --limit 50
+	python3 mongodb/user_profile_builder.py --mode batch --batch-size 10 --limit 50
 
 dashboard:
 	streamlit run dashboard/app.py --server.port 8501

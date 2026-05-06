@@ -15,7 +15,7 @@ from pyspark.sql.types import (
 )
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from spark_jobs.spark_utils import BRONZE_PATH, KAFKA_BROKER, get_spark
+from spark_jobs.spark_config import BRONZE_PATH, KAFKA_BROKER, get_spark
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", choices=["batch", "stream"], default="batch")
